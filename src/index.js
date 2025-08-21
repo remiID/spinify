@@ -1,0 +1,859 @@
+// Cloudflare Worker pour servir le site SPINIFY
+export default {
+  async fetch(request, env, ctx) {
+    // HTML complet du site SPINIFY
+    const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPINIFY - Votre Monde. Votre Terrain de Jeu.</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00f5ff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #00f5ff;
+        }
+
+        /* Language Selector */
+        .language-selector {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .lang-flag {
+            cursor: pointer;
+            font-size: 1.5rem;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+
+        .lang-flag.active {
+            opacity: 1;
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(0,245,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #00f5ff, #ff00ff, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero h2 {
+            font-size: clamp(1.5rem, 3vw, 2.5rem);
+            margin-bottom: 2rem;
+            color: #cccccc;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 3rem;
+            color: #aaaaaa;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 1rem 3rem;
+            background: linear-gradient(135deg, #00f5ff, #ff00ff);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 245, 255, 0.3);
+        }
+
+        /* Sections */
+        .section {
+            padding: 6rem 0;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-left: 2rem;
+            padding-right: 2rem;
+        }
+
+        .section h2 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            margin-bottom: 3rem;
+            text-align: center;
+            background: linear-gradient(135deg, #00f5ff, #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .section h3 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: #00f5ff;
+        }
+
+        .section p {
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            color: #cccccc;
+        }
+
+        /* Solution Section */
+        .solution-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+
+        .solution-step {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .solution-step-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .economic-model {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .model-card {
+            padding: 2rem;
+            background: rgba(0, 245, 255, 0.1);
+            border-radius: 15px;
+            border: 1px solid rgba(0, 245, 255, 0.3);
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin: 3rem 0;
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00f5ff, #ff00ff);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .funding-goal {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #00f5ff;
+            margin-bottom: 1rem;
+        }
+
+        /* Pricing Cards */
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .pricing-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 245, 255, 0.2);
+        }
+
+        .card-header {
+            height: 200px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .card-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, transparent, rgba(10, 10, 10, 0.8));
+        }
+
+        .card-content {
+            padding: 2rem;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #00f5ff;
+        }
+
+        .card-price {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #00f5ff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card-features {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .card-features li {
+            padding: 0.5rem 0;
+            color: #cccccc;
+        }
+
+        .card-features li::before {
+            content: '✓';
+            color: #00f5ff;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .card-button {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #00f5ff, #ff00ff);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .card-button:hover {
+            transform: scale(1.05);
+        }
+
+        /* Contact Section */
+        .contact-info {
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .social-links a {
+            color: #00f5ff;
+            font-size: 2rem;
+            transition: color 0.3s ease;
+        }
+
+        .social-links a:hover {
+            color: #ff00ff;
+        }
+
+        /* Footer */
+        .footer {
+            background: rgba(0, 0, 0, 0.5);
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Mobile Responsive */
+        .mobile-menu {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .mobile-menu {
+                display: block;
+                background: none;
+                border: none;
+                color: white;
+                font-size: 1.5rem;
+                cursor: pointer;
+            }
+
+            .solution-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .economic-model {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Card Background Images */
+        .gamer-card { background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect fill="%2300f5ff" width="400" height="200"/><rect fill="%2300cc88" x="50" y="50" width="300" height="100" rx="10"/><text x="200" y="110" text-anchor="middle" fill="white" font-size="20" font-family="monospace">GAMER</text></svg>'); }
+        .pioneer-card { background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect fill="%23ff6b35" width="400" height="200"/><circle fill="%2300f5ff" cx="200" cy="100" r="60"/><text x="200" y="110" text-anchor="middle" fill="white" font-size="16" font-family="monospace">PIONEER</text></svg>'); }
+        .legend-card { background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect fill="%23ff00ff" width="400" height="200"/><polygon fill="%23ffff00" points="200,40 220,80 260,80 230,110 240,150 200,130 160,150 170,110 140,80 180,80"/><text x="200" y="180" text-anchor="middle" fill="white" font-size="18" font-family="monospace">LEGEND</text></svg>'); }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">SPINIFY</div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#vision" data-key="nav_vision">La Vision</a></li>
+                <li><a href="#solution" data-key="nav_solution">La Solution</a></li>
+                <li><a href="#communaute" data-key="nav_community">La Communauté</a></li>
+                <li><a href="#contreparties" data-key="nav_rewards">Contreparties</a></li>
+                <li><a href="#contact" data-key="nav_contact">Contact</a></li>
+            </ul>
+            <div class="language-selector">
+                <span class="lang-flag" onclick="setLanguage('fr')">🇫🇷</span>
+                <span class="lang-flag" onclick="setLanguage('en')">🇬🇧</span>
+                <span class="lang-flag" onclick="setLanguage('es')">🇪🇸</span>
+            </div>
+            <button class="mobile-menu" onclick="toggleMenu()">☰</button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="vision">
+        <div class="hero-content">
+            <h1 data-key="hero_title">T'as déjà re-spawn dans ta rue ? Et à Tokyo ?</h1>
+            <h2 data-key="hero_subtitle">SPINIFY - Votre Monde. Votre Terrain de Jeu.</h2>
+            <p data-key="hero_text">Vous avez exploré des donjons, conquis des galaxies lointaines, sauvé des princesses dans des châteaux enchantés... Mais avez-vous déjà transformé votre quartier en terrain de jeu épique ? Imaginons un monde où chaque rue, chaque bâtiment, chaque coin de votre ville devient le décor d'aventures extraordinaires.</p>
+            <a href="#contreparties" class="cta-button" data-key="cta_support">Soutenir le Projet</a>
+        </div>
+    </section>
+
+    <!-- Solution Section -->
+    <section class="section" id="solution">
+        <div>
+            <h3 data-key="problem_title">Des Mondes Ouverts, mais pas Notre Monde</h3>
+            <p data-key="problem_text">Les jeux actuels nous proposent des mondes gigantesques, mais génériques. Des villes qui se ressemblent toutes, des environnements créés artificiellement qui coûtent des millions à développer. Et si la solution était juste sous nos yeux ?</p>
+            
+            <h2 data-key="solution_title">Notre Solution : La Technologie de Génération de Mondes Réels</h2>
+            
+            <div class="solution-grid">
+                <div class="solution-step">
+                    <div class="solution-step-icon">🛰️</div>
+                    <h4 data-key="step1_title">Le Monde Réel</h4>
+                    <p data-key="step1_text">Analyse de données géospatiales, images satellites et vues de rue.</p>
+                </div>
+                <div class="solution-step">
+                    <div class="solution-step-icon">🧠</div>
+                    <h4 data-key="step2_title">La Magie de l'IA</h4>
+                    <p data-key="step2_text">Nos algorithmes interprètent la structure 3D du monde.</p>
+                </div>
+                <div class="solution-step">
+                    <div class="solution-step-icon">🎮</div>
+                    <h4 data-key="step3_title">Le Monde Jouable</h4>
+                    <p data-key="step3_text">Génération d'un environnement 3D photoréaliste et optimisé.</p>
+                </div>
+            </div>
+
+            <p data-key="tech_explanation">Notre technologie révolutionnaire analyse les données du monde réel - images satellites, cartes topographiques, données géographiques - et les transforme automatiquement en environnements 3D jouables. Plus besoin de recréer manuellement chaque bâtiment : notre IA fait le travail pour nous.</p>
+
+            <h3 data-key="economic_title">Un Écosystème pour Joueurs et Créateurs</h3>
+            <div class="economic-model">
+                <div class="model-card">
+                    <h4 data-key="players_title">Pour les Joueurs</h4>
+                    <p data-key="players_text">Modèle d'abonnement flexible :</p>
+                    <ul>
+                        <li data-key="freemium">Freemium : Votre quartier gratuit</li>
+                        <li data-key="premium_5">5€/mois : Votre ville</li>
+                        <li data-key="premium_10">10€/mois : Votre pays</li>
+                        <li data-key="premium_50">50€/mois : Le monde entier</li>
+                    </ul>
+                </div>
+                <div class="model-card">
+                    <h4 data-key="creators_title">Pour les Créateurs</h4>
+                    <p data-key="creators_text">Vision B2B : Outil pour les studios de développement. Imaginez Assassin's Creed dans le Paris actuel, ou Call of Duty dans votre ville natale.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Community Section -->
+    <section class="section" id="communaute">
+        <h2 data-key="community_title">Pourquoi nous avons besoin de VOUS.</h2>
+        <div class="progress-container">
+            <div class="funding-goal" data-key="funding_goal">Objectif : 50 000 € - 100 000 €</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div data-key="current_amount">0 € collectés</div>
+        </div>
+        <p data-key="community_text">Cette première levée est le carburant de la fusée. Avec ces fonds, nous allons créer un prototype fonctionnel qui prouvera notre concept aux grands investisseurs et nous permettra de professionnaliser notre recherche de fonds. <strong>Votre participation est un vote de confiance plus puissant que n'importe quel business plan.</strong></p>
+    </section>
+
+    <!-- Rewards Section -->
+    <section class="section" id="contreparties">
+        <h2 data-key="rewards_title">Devenez les Pionniers de ce Nouveau Monde</h2>
+        <div class="pricing-grid">
+            <div class="pricing-card">
+                <div class="card-header gamer-card"></div>
+                <div class="card-content">
+                    <h3 class="card-title">GAMER</h3>
+                    <div class="card-price">30 €</div>
+                    <ul class="card-features">
+                        <li data-key="gamer_feature1">Accès anticipé au prototype</li>
+                        <li data-key="gamer_feature2">Votre nom dans les crédits</li>
+                        <li data-key="gamer_feature3">Newsletter exclusive</li>
+                        <li data-key="gamer_feature4">Badge "Early Supporter"</li>
+                    </ul>
+                    <button class="card-button" data-key="become_gamer">Je deviens Gamer</button>
+                </div>
+            </div>
+            
+            <div class="pricing-card">
+                <div class="card-header pioneer-card"></div>
+                <div class="card-content">
+                    <h3 class="card-title">PIONNIER</h3>
+                    <div class="card-price">100 €</div>
+                    <ul class="card-features">
+                        <li data-key="pioneer_feature1">Tout du pack GAMER</li>
+                        <li data-key="pioneer_feature2">Accès à la beta fermée</li>
+                        <li data-key="pioneer_feature3">Session de gameplay exclusive</li>
+                        <li data-key="pioneer_feature4">Influence sur le développement</li>
+                        <li data-key="pioneer_feature5">Skin exclusif "Pionnier"</li>
+                    </ul>
+                    <button class="card-button" data-key="become_pioneer">Je deviens Pionnier</button>
+                </div>
+            </div>
+            
+            <div class="pricing-card">
+                <div class="card-header legend-card"></div>
+                <div class="card-content">
+                    <h3 class="card-title">LÉGENDE</h3>
+                    <div class="card-price">1000 €</div>
+                    <ul class="card-features">
+                        <li data-key="legend_feature1">Tout des packs précédents</li>
+                        <li data-key="legend_feature2">Rencontre avec l'équipe</li>
+                        <li data-key="legend_feature3">Votre lieu dans le jeu</li>
+                        <li data-key="legend_feature4">Statut "God Mode" permanent</li>
+                        <li data-key="legend_feature5">Participation aux décisions stratégiques</li>
+                    </ul>
+                    <button class="card-button" data-key="become_legend">Je deviens une Légende</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="section" id="contact">
+        <h2 data-key="contact_title">Rejoignez l'Aventure</h2>
+        <p data-key="contact_text">L'avenir du jeu vidéo ne se trouve pas dans une galaxie lointaine, mais juste devant votre porte. Ensemble, nous allons transformer chaque rue en quête, chaque bâtiment en donjon, chaque ville en univers infini de possibilités.</p>
+        <div class="contact-info">
+            <p data-key="contact_email">📧 contact@spinify.game</p>
+            <div class="social-links">
+                <a href="#" title="Discord">💬</a>
+                <a href="#" title="Twitter">🐦</a>
+                <a href="#" title="Instagram">📷</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p data-key="copyright">Copyright © 2024 SPINIFY. Tous droits réservés.</p>
+    </footer>
+
+    <script>
+        // Translations
+        const translations = {
+            fr: {
+                nav_vision: "La Vision",
+                nav_solution: "La Solution", 
+                nav_community: "La Communauté",
+                nav_rewards: "Contreparties",
+                nav_contact: "Contact",
+                hero_title: "T'as déjà re-spawn dans ta rue ? Et à Tokyo ?",
+                hero_subtitle: "SPINIFY - Votre Monde. Votre Terrain de Jeu.",
+                hero_text: "Vous avez exploré des donjons, conquis des galaxies lointaines, sauvé des princesses dans des châteaux enchantés... Mais avez-vous déjà transformé votre quartier en terrain de jeu épique ? Imaginons un monde où chaque rue, chaque bâtiment, chaque coin de votre ville devient le décor d'aventures extraordinaires.",
+                cta_support: "Soutenir le Projet",
+                problem_title: "Des Mondes Ouverts, mais pas Notre Monde",
+                problem_text: "Les jeux actuels nous proposent des mondes gigantesques, mais génériques. Des villes qui se ressemblent toutes, des environnements créés artificiellement qui coûtent des millions à développer. Et si la solution était juste sous nos yeux ?",
+                solution_title: "Notre Solution : La Technologie de Génération de Mondes Réels",
+                step1_title: "Le Monde Réel",
+                step1_text: "Analyse de données géospatiales, images satellites et vues de rue.",
+                step2_title: "La Magie de l'IA",
+                step2_text: "Nos algorithmes interprètent la structure 3D du monde.",
+                step3_title: "Le Monde Jouable", 
+                step3_text: "Génération d'un environnement 3D photoréaliste et optimisé.",
+                tech_explanation: "Notre technologie révolutionnaire analyse les données du monde réel - images satellites, cartes topographiques, données géographiques - et les transforme automatiquement en environnements 3D jouables. Plus besoin de recréer manuellement chaque bâtiment : notre IA fait le travail pour nous.",
+                economic_title: "Un Écosystème pour Joueurs et Créateurs",
+                players_title: "Pour les Joueurs",
+                players_text: "Modèle d'abonnement flexible :",
+                freemium: "Freemium : Votre quartier gratuit",
+                premium_5: "5€/mois : Votre ville",
+                premium_10: "10€/mois : Votre pays", 
+                premium_50: "50€/mois : Le monde entier",
+                creators_title: "Pour les Créateurs",
+                creators_text: "Vision B2B : Outil pour les studios de développement. Imaginez Assassin's Creed dans le Paris actuel, ou Call of Duty dans votre ville natale.",
+                community_title: "Pourquoi nous avons besoin de VOUS.",
+                funding_goal: "Objectif : 50 000 € - 100 000 €",
+                current_amount: "0 € collectés",
+                community_text: "Cette première levée est le carburant de la fusée. Avec ces fonds, nous allons créer un prototype fonctionnel qui prouvera notre concept aux grands investisseurs et nous permettra de professionnaliser notre recherche de fonds. Votre participation est un vote de confiance plus puissant que n'importe quel business plan.",
+                rewards_title: "Devenez les Pionniers de ce Nouveau Monde",
+                gamer_feature1: "Accès anticipé au prototype",
+                gamer_feature2: "Votre nom dans les crédits",
+                gamer_feature3: "Newsletter exclusive",
+                gamer_feature4: "Badge \"Early Supporter\"",
+                become_gamer: "Je deviens Gamer",
+                pioneer_feature1: "Tout du pack GAMER",
+                pioneer_feature2: "Accès à la beta fermée",
+                pioneer_feature3: "Session de gameplay exclusive",
+                pioneer_feature4: "Influence sur le développement",
+                pioneer_feature5: "Skin exclusif \"Pionnier\"",
+                become_pioneer: "Je deviens Pionnier",
+                legend_feature1: "Tout des packs précédents",
+                legend_feature2: "Rencontre avec l'équipe",
+                legend_feature3: "Votre lieu dans le jeu",
+                legend_feature4: "Statut \"God Mode\" permanent",
+                legend_feature5: "Participation aux décisions stratégiques",
+                become_legend: "Je deviens une Légende",
+                contact_title: "Rejoignez l'Aventure",
+                contact_text: "L'avenir du jeu vidéo ne se trouve pas dans une galaxie lointaine, mais juste devant votre porte. Ensemble, nous allons transformer chaque rue en quête, chaque bâtiment en donjon, chaque ville en univers infini de possibilités.",
+                contact_email: "📧 contact@spinify.game",
+                copyright: "Copyright © 2024 SPINIFY. Tous droits réservés."
+            },
+            en: {
+                nav_vision: "The Vision",
+                nav_solution: "The Solution",
+                nav_community: "Community", 
+                nav_rewards: "Rewards",
+                nav_contact: "Contact",
+                hero_title: "Ever respawned on your street? What about in Tokyo?",
+                hero_subtitle: "SPINIFY - Your World. Your Playground.",
+                hero_text: "You've explored dungeons, conquered distant galaxies, saved princesses in enchanted castles... But have you ever transformed your neighborhood into an epic playground? Imagine a world where every street, every building, every corner of your city becomes the backdrop for extraordinary adventures.",
+                cta_support: "Support the Project",
+                problem_title: "Open Worlds, but not Our World",
+                problem_text: "Current games offer us gigantic worlds, but generic ones. Cities that all look alike, artificially created environments that cost millions to develop. What if the solution was right under our noses?",
+                solution_title: "Our Solution: Real-World Generation Technology",
+                step1_title: "The Real World",
+                step1_text: "Analysis of geospatial data, satellite images and street views.",
+                step2_title: "The AI Magic",
+                step2_text: "Our algorithms interpret the 3D structure of the world.",
+                step3_title: "The Playable World",
+                step3_text: "Generation of a photorealistic and optimized 3D environment.",
+                tech_explanation: "Our revolutionary technology analyzes real-world data - satellite images, topographic maps, geographic data - and automatically transforms them into playable 3D environments. No more need to manually recreate every building: our AI does the work for us.",
+                economic_title: "An Ecosystem for Players and Creators",
+                players_title: "For Players",
+                players_text: "Flexible subscription model:",
+                freemium: "Freemium: Your neighborhood for free",
+                premium_5: "€5/month: Your city",
+                premium_10: "€10/month: Your country",
+                premium_50: "€50/month: The entire world",
+                creators_title: "For Creators",
+                creators_text: "B2B vision: Tool for development studios. Imagine Assassin's Creed in today's Paris, or Call of Duty in your hometown.",
+                community_title: "Why We Need YOU.",
+                funding_goal: "Goal: €50,000 - €100,000",
+                current_amount: "€0 raised",
+                community_text: "This first fundraising is the rocket fuel. With these funds, we will create a functional prototype that will prove our concept to major investors and allow us to professionalize our fundraising. Your participation is a vote of confidence more powerful than any business plan.",
+                rewards_title: "Become the Pioneers of this New World",
+                gamer_feature1: "Early access to prototype",
+                gamer_feature2: "Your name in the credits",
+                gamer_feature3: "Exclusive newsletter",
+                gamer_feature4: "\"Early Supporter\" badge",
+                become_gamer: "I become a Gamer",
+                pioneer_feature1: "Everything from GAMER pack",
+                pioneer_feature2: "Closed beta access",
+                pioneer_feature3: "Exclusive gameplay session",
+                pioneer_feature4: "Development influence",
+                pioneer_feature5: "Exclusive \"Pioneer\" skin",
+                become_pioneer: "I become a Pioneer",
+                legend_feature1: "Everything from previous packs",
+                legend_feature2: "Meet the team",
+                legend_feature3: "Your place in the game",
+                legend_feature4: "Permanent \"God Mode\" status",
+                legend_feature5: "Strategic decision participation",
+                become_legend: "I become a Legend",
+                contact_title: "Join the Adventure",
+                contact_text: "The future of video games is not in a distant galaxy, but right outside your door. Together, we will transform every street into a quest, every building into a dungeon, every city into an infinite universe of possibilities.",
+                contact_email: "📧 contact@spinify.game",
+                copyright: "Copyright © 2024 SPINIFY. All rights reserved."
+            },
+            es: {
+                nav_vision: "La Visión",
+                nav_solution: "La Solución",
+                nav_community: "Comunidad",
+                nav_rewards: "Recompensas", 
+                nav_contact: "Contacto",
+                hero_title: "¿Alguna vez has reaparecido en tu calle? ¿Y en Tokio?",
+                hero_subtitle: "SPINIFY - Tu Mundo. Tu Terreno de Juego.",
+                hero_text: "Has explorado mazmorras, conquistado galaxias lejanas, salvado princesas en castillos encantados... ¿Pero alguna vez has transformado tu barrio en un campo de juego épico? Imagina un mundo donde cada calle, cada edificio, cada rincón de tu ciudad se convierte en el escenario de aventuras extraordinarias.",
+                cta_support: "Apoyar el Proyecto",
+                problem_title: "Mundos Abiertos, pero no Nuestro Mundo",
+                problem_text: "Los juegos actuales nos ofrecen mundos gigantescos, pero genéricos. Ciudades que se parecen todas, entornos creados artificialmente que cuestan millones desarrollar. ¿Y si la solución estuviera justo bajo nuestras narices?",
+                solution_title: "Nuestra Solución: Tecnología de Generación de Mundos Reales",
+                step1_title: "El Mundo Real",
+                step1_text: "Análisis de datos geoespaciales, imágenes satelitales y vistas de calle.",
+                step2_title: "La Magia de la IA",
+                step2_text: "Nuestros algoritmos interpretan la estructura 3D del mundo.",
+                step3_title: "El Mundo Jugable",
+                step3_text: "Generación de un entorno 3D fotorrealista y optimizado.",
+                tech_explanation: "Nuestra tecnología revolucionaria analiza datos del mundo real - imágenes satelitales, mapas topográficos, datos geográficos - y los transforma automáticamente en entornos 3D jugables. Ya no necesitamos recrear manualmente cada edificio: nuestra IA hace el trabajo por nosotros.",
+                economic_title: "Un Ecosistema para Jugadores y Creadores",
+                players_title: "Para Jugadores",
+                players_text: "Modelo de suscripción flexible:",
+                freemium: "Freemium: Tu barrio gratis",
+                premium_5: "5€/mes: Tu ciudad",
+                premium_10: "10€/mes: Tu país",
+                premium_50: "50€/mes: El mundo entero",
+                creators_title: "Para Creadores",
+                creators_text: "Visión B2B: Herramienta para estudios de desarrollo. Imagina Assassin's Creed en el París actual, o Call of Duty en tu ciudad natal.",
+                community_title: "Por Qué Te Necesitamos a TI.",
+                funding_goal: "Objetivo: 50.000 € - 100.000 €",
+                current_amount: "0 € recaudados",
+                community_text: "Esta primera recaudación es el combustible del cohete. Con estos fondos, crearemos un prototipo funcional que probará nuestro concepto a grandes inversores y nos permitirá profesionalizar nuestra búsqueda de fondos. Tu participación es un voto de confianza más poderoso que cualquier plan de negocios.",
+                rewards_title: "Conviértete en los Pioneros de este Nuevo Mundo",
+                gamer_feature1: "Acceso anticipado al prototipo",
+                gamer_feature2: "Tu nombre en los créditos",
+                gamer_feature3: "Newsletter exclusivo",
+                gamer_feature4: "Insignia \"Early Supporter\"",
+                become_gamer: "Me convierto en Gamer",
+                pioneer_feature1: "Todo del pack GAMER",
+                pioneer_feature2: "Acceso a beta cerrada",
+                pioneer_feature3: "Sesión de juego exclusiva",
+                pioneer_feature4: "Influencia en el desarrollo",
+                pioneer_feature5: "Skin exclusivo \"Pionero\"",
+                become_pioneer: "Me convierto en Pionero",
+                legend_feature1: "Todo de los packs anteriores",
+                legend_feature2: "Conocer al equipo",
+                legend_feature3: "Tu lugar en el juego",
+                legend_feature4: "Estado \"God Mode\" permanente",
+                legend_feature5: "Participación en decisiones estratégicas",
+                become_legend: "Me convierto en Leyenda",
+                contact_title: "Únete a la Aventura",
+                contact_text: "El futuro de los videojuegos no está en una galaxia lejana, sino justo afuera de tu puerta. Juntos, transformaremos cada calle en una misión, cada edificio en una mazmorra, cada ciudad en un universo infinito de posibilidades.",
+                contact_email: "📧 contact@spinify.game",
+                copyright: "Copyright © 2024 SPINIFY. Todos los derechos reservados."
+            }
+        };
+
+        // Language management
+        let currentLang = 'fr';
+
+        function detectLanguage() {
+            const saved = localStorage.getItem('spinify_lang');
+            if (saved) {
+                return saved;
+            }
+            
+            const browserLang = navigator.language.split('-')[0];
+            if (browserLang === 'fr') return 'fr';
+            if (browserLang === 'es') return 'es';
+            return 'en';
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('spinify_lang', lang);
+            updateContent();
+            updateActiveFlag();
+        }
+
+        function updateContent() {
+            const elements = document.querySelectorAll('[data-key]');
+            elements.forEach(element => {
+                const key = element.getAttribute('data-key');
+                if (translations[currentLang] && translations[currentLang][key]) {
+                    element.textContent = translations[currentLang][key];
+                }
+            });
+        }
+
+        function updateActiveFlag() {
+            document.querySelectorAll('.lang-flag').forEach(flag => {
+                flag.classList.remove('active');
+            });
+            
+            const flags = {
+                'fr': '🇫🇷',
+                'en': '🇬🇧', 
+                'es': '🇪🇸'
+            };
+            
+            document.querySelectorAll('.lang-flag').forEach(flag => {
+                if (flag.textContent === flags[currentLang]) {
+                    flag.classList.add('active');
+                }
+            });
+        }
+
+        // Mobile menu toggle
+        function toggleMenu() {
+            const navLinks = document.getElementById('navLinks');
+            navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        // Progress animation
+        function animateProgress() {
+            const progressFill = document.getElementById('progressFill');
+            const targetProgress = 0; // Can be updated dynamically
+            progressFill.style.width = targetProgress + '%';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            currentLang = detectLanguage();
+            updateContent();
+            updateActiveFlag();
+            animateProgress();
+            
+            // Add smooth scrolling for navigation links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        });
+
+        // Add scroll effect to navbar
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.style.background = 'rgba(10, 10, 10, 0.98)';
+            } else {
+                navbar.style.background = 'rgba(10, 10, 10, 0.95)';
+            }
+        });
+    </script>
+</body>
+</html>`;
+
+    // Retourner une réponse HTTP avec le HTML
+    return new Response(html, {
+      headers: {
+        'Content-Type': 'text/html;charset=UTF-8',
+        'Cache-Control': 'public, max-age=86400', // Cache pendant 24h
+      },
+    });
+  },
+};
